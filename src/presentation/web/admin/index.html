@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STT Admin Dashboard</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <main class="dashboard">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3v18" />
+            <path d="M7 8v8" />
+            <path d="M17 8v8" />
+            <path d="M3 10v4" />
+            <path d="M21 10v4" />
+          </svg>
+        </div>
+        <div>
+          <h1 data-i18n="title">STT Admin</h1>
+          <p data-i18n="subtitle">Draft dashboard for speech-to-text service monitoring</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="lang-row" aria-label="Language switcher">
+          <button class="lang-btn active" type="button" data-lang="en">EN</button>
+          <button class="lang-btn" type="button" data-lang="ru">RU</button>
+          <button class="lang-btn" type="button" data-lang="uz">UZ</button>
+        </div>
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Theme toggle">
+          <svg id="themeIcon" viewBox="0 0 24 24">
+            <path d="M12 3v1" />
+            <path d="M12 20v1" />
+            <path d="M4.22 4.22l.7.7" />
+            <path d="M19.08 19.08l.7.7" />
+            <path d="M3 12h1" />
+            <path d="M20 12h1" />
+            <path d="M4.22 19.78l.7-.7" />
+            <path d="M19.08 4.92l.7-.7" />
+            <circle cx="12" cy="12" r="4" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <div class="section-title" data-i18n="overviewTitle">Today overview</div>
+          <div class="section-note" data-i18n="overviewNote">Core metrics for uploaded files, browser recordings and STT results.</div>
+        </div>
+        <div class="pill"><span class="dot"></span><span data-i18n="serviceOnline">Service online</span></div>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <div class="small-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M7 8v8"/><path d="M17 8v8"/></svg>
+            </div>
+            <span class="delta">+12%</span>
+          </div>
+          <div>
+            <div class="kpi-label" data-i18n="totalRequests">Requests</div>
+            <div class="kpi-value">1,284</div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <div class="small-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 17v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/><path d="M12 4v12"/><path d="M8 8l4-4 4 4"/></svg>
+            </div>
+            <span class="delta">+8%</span>
+          </div>
+          <div>
+            <div class="kpi-label" data-i18n="uploads">Uploads</div>
+            <div class="kpi-value">842</div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <div class="small-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>
+            </div>
+            <span class="delta">+19%</span>
+          </div>
+          <div>
+            <div class="kpi-label" data-i18n="recordings">Recordings</div>
+            <div class="kpi-value">442</div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <div class="small-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <span class="delta bad">-2%</span>
+          </div>
+          <div>
+            <div class="kpi-label" data-i18n="successRate">Success rate</div>
+            <div class="kpi-value">96.8%</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="hero">
+      <article class="panel chart-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title" data-i18n="activityTitle">Activity by hour</div>
+            <div class="section-note" data-i18n="activityNote">Demo data for the last 12 hours.</div>
+          </div>
+          <span class="pill" data-i18n="last12h">Last 12h</span>
+        </div>
+        <div class="bars" aria-label="Activity chart">
+          <div class="bar-wrap"><div class="bar" style="height: 52%; --fill: 72%;"></div><span class="bar-label">08</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 72%; --fill: 78%;"></div><span class="bar-label">09</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 64%; --fill: 70%;"></div><span class="bar-label">10</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 86%; --fill: 88%;"></div><span class="bar-label">11</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 58%; --fill: 68%;"></div><span class="bar-label">12</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 77%; --fill: 82%;"></div><span class="bar-label">13</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 92%; --fill: 94%;"></div><span class="bar-label">14</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 80%; --fill: 84%;"></div><span class="bar-label">15</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 68%; --fill: 73%;"></div><span class="bar-label">16</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 74%; --fill: 76%;"></div><span class="bar-label">17</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 62%; --fill: 68%;"></div><span class="bar-label">18</span></div>
+          <div class="bar-wrap"><div class="bar" style="height: 55%; --fill: 62%;"></div><span class="bar-label">19</span></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <div class="section-title" data-i18n="statusTitle">Processing status</div>
+            <div class="section-note" data-i18n="statusNote">Current pipeline health and queue state.</div>
+          </div>
+        </div>
+        <div class="status-grid">
+          <div class="status-box success">
+            <div class="status-label" data-i18n="completed">Completed</div>
+            <div class="status-value">1,243</div>
+          </div>
+          <div class="status-box warning">
+            <div class="status-label" data-i18n="queue">In queue</div>
+            <div class="status-value">18</div>
+          </div>
+          <div class="status-box info">
+            <div class="status-label" data-i18n="avgTime">Avg. processing</div>
+            <div class="status-value">4.2s</div>
+          </div>
+          <div class="status-box danger">
+            <div class="status-label" data-i18n="failed">Failed</div>
+            <div class="status-value">41</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <div class="section-title" data-i18n="formatsTitle">Popular formats</div>
+            <div class="section-note" data-i18n="formatsNote">Accepted audio types used by clients.</div>
+          </div>
+        </div>
+        <div class="format-list">
+          <div class="progress-row"><span class="progress-label">MP3</span><div class="progress-line"><div class="progress-fill" style="--width: 72%;"></div></div><span class="progress-value">72%</span></div>
+          <div class="progress-row"><span class="progress-label">M4A</span><div class="progress-line"><div class="progress-fill" style="--width: 46%;"></div></div><span class="progress-value">46%</span></div>
+          <div class="progress-row"><span class="progress-label">WAV</span><div class="progress-line"><div class="progress-fill" style="--width: 38%;"></div></div><span class="progress-value">38%</span></div>
+          <div class="progress-row"><span class="progress-label">OGG</span><div class="progress-line"><div class="progress-fill" style="--width: 24%;"></div></div><span class="progress-value">24%</span></div>
+          <div class="progress-row"><span class="progress-label">FLAC</span><div class="progress-line"><div class="progress-fill" style="--width: 16%;"></div></div><span class="progress-value">16%</span></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <div class="section-title" data-i18n="languagesTitle">Interface languages</div>
+            <div class="section-note" data-i18n="languagesNote">Client UI language distribution.</div>
+          </div>
+        </div>
+        <div class="language-list">
+          <div class="progress-row"><span class="progress-label">RU</span><div class="progress-line"><div class="progress-fill" style="--width: 58%;"></div></div><span class="progress-value">58%</span></div>
+          <div class="progress-row"><span class="progress-label">UZ</span><div class="progress-line"><div class="progress-fill" style="--width: 31%;"></div></div><span class="progress-value">31%</span></div>
+          <div class="progress-row"><span class="progress-label">EN</span><div class="progress-line"><div class="progress-fill" style="--width: 11%;"></div></div><span class="progress-value">11%</span></div>
+        </div>
+        <div class="empty-note" style="margin-top: 16px;" data-i18n="integrationNote">
+          Later this block can be connected to backend counters: uploads, recordings, duration limit errors, copy/download events and STT response times.
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <div class="section-title" data-i18n="recentTitle">Recent requests</div>
+          <div class="section-note" data-i18n="recentNote">Rough table structure for future API data.</div>
+        </div>
+        <span class="pill" data-i18n="demoData">Demo data</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="colTime">Time</th>
+              <th data-i18n="colSource">Source</th>
+              <th data-i18n="colFile">File</th>
+              <th data-i18n="colDuration">Duration</th>
+              <th data-i18n="colLanguage">Language</th>
+              <th data-i18n="colStatus">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>19:42</td>
+              <td data-i18n="sourceRecord">Recording</td>
+              <td>audio_2026-06-09_19-42-10.webm</td>
+              <td>00:24</td>
+              <td>RU</td>
+              <td><span class="badge success" data-i18n="ok">Done</span></td>
+            </tr>
+            <tr>
+              <td>19:38</td>
+              <td data-i18n="sourceUpload">Upload</td>
+              <td>meeting_note.m4a</td>
+              <td>00:29</td>
+              <td>UZ</td>
+              <td><span class="badge success" data-i18n="ok">Done</span></td>
+            </tr>
+            <tr>
+              <td>19:31</td>
+              <td data-i18n="sourceUpload">Upload</td>
+              <td>voice_sample.mp3</td>
+              <td>00:31</td>
+              <td>RU</td>
+              <td><span class="badge warning" data-i18n="tooLong">Too long</span></td>
+            </tr>
+            <tr>
+              <td>19:25</td>
+              <td data-i18n="sourceRecord">Recording</td>
+              <td>audio_2026-06-09_19-25-04.webm</td>
+              <td>00:12</td>
+              <td>EN</td>
+              <td><span class="badge danger" data-i18n="error">Error</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+
+transformers
+torch
+torchvision
+torchaudio
+accelerate
+sentencepiece
+protobuf
+soundfile
+librosa
+huggingface_hub
+
+ollama
