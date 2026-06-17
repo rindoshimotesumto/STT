@@ -15,9 +15,9 @@ class GPU:
     def __init__(self):
         pass
 
-    def get_devices(self) -> dict[int, GPUinfo] | None:
+    def get_devices(self) -> dict[int, GPUinfo] | bool | None:
         if not torch.cuda.is_available():
-            return None
+            return False
         
         gpus = {}
 
@@ -39,9 +39,9 @@ class GPU:
     
     def _to_gb(self, value_on_bytes: int) -> int:
         if not isinstance(value_on_bytes, int):
-            raise ValueError("")
+            raise ValueError("error: value not in int")
         
         if value_on_bytes == 0:
-            raise ValueError("")
+            raise ValueError("error: value == 0")
 
         return round(value_on_bytes/1024**3, 2)
