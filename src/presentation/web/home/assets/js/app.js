@@ -1137,7 +1137,8 @@
             throw new Error(errorMessage);
           }
 
-          const resultText = data?.normalize || data?.original || t("noText");
+          const resultText = String(data?.normalize || data?.original || t("noText"));
+          alert(resultText);
 
           setStatusKey("statusDone", "success");
           setOutput(resultText, false);
