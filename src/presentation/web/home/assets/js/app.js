@@ -1137,7 +1137,7 @@
             throw new Error(errorMessage);
           }
 
-          const resultText = data?.text || data?.result || data?.transcription || t("noText");
+          const resultText = data?.normalize || data?.original || t("noText");
 
           setStatusKey("statusDone", "success");
           setOutput(resultText, false);

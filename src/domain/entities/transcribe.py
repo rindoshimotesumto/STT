@@ -1,19 +1,21 @@
 from typing import Optional, Any
 from pathlib import Path
 
-class Transribe:
+class Transcribe:
     def __init__(
         self,
-        audio_path: str | Path,
-        transcribe: str,
-        is_true: bool,
-        processing_time: float
+        audio_path: Path,
+        transcript: str,
+        processing_time: float,
+        success: bool,
+        response_received: bool
     ) -> None:
         
         self.audio_path = self.check_audio_path(audio_path)
-        self.transcribe = self.check_transcribe_type(transcribe)
-        self.is_true = self.check_is_true(is_true)
-        self.processing_time = processing_time
+        self.transcribe = self.check_transcript_type(transcript)
+        self.processing_time = self.check_processing_time(processing_time)
+        self.success = self.check_succes(success)
+        self.response_received = self.check_response_received(response_received)
 
     @staticmethod
     def check_audio_path(audio_path: Optional[str | Path]) -> Path:
@@ -28,22 +30,29 @@ class Transribe:
         return _audio_path_obj
 
     @staticmethod
-    def check_transcribe_type(transcribe: Optional[str | Any]) -> str:
-        if not isinstance(transcribe, str):
+    def check_transcript_type(transcript: Optional[str | Any]) -> str:
+        if not isinstance(transcript, str):
             raise TypeError()
         
-        return transcribe
+        return transcript
     
     @staticmethod
-    def check_is_true(is_true: Optional[bool]) -> bool:
-        if not isinstance(is_true, bool):
+    def check_processing_time(processing_time: Optional[float | int]) -> float:
+        if not isinstance(processing_time, (float, int)):
             raise TypeError()
         
-        return is_true
+        return float(processing_time)
     
     @staticmethod
-    def check_processing_time(processing_time: Optional[float]) -> float:
-        if not isinstance(processing_time, float):
+    def check_succes(success: Optional[bool]) -> bool:
+        if not isinstance(success, bool):
             raise TypeError()
-
-        return processing_time
+        
+        return success
+    
+    @staticmethod
+    def check_response_received(response_received: Optional[bool]) -> bool:
+        if not isinstance(response_received, bool):
+            raise TypeError()
+        
+        return response_received
