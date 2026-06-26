@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.domain.entities.transcribe import Transribe
+from src.domain.entities.transcribe import Transcribe
 
 @dataclass
 class TranscribeCreate:
@@ -11,4 +11,4 @@ class TranscribeCreate:
 @dataclass
 class GetAllTranscribe:
     transcribe_id: int
-    transcribe: Transribe
+    transcribe: Transcribe

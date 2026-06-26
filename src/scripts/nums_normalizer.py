@@ -6,6 +6,8 @@ class UzbekNumberNormalizer:
     def __init__(self) -> None:
         self.units = {
             "nol": 0,
+            "no'l": 0,
+            "noʻl": 0,
             "bir": 1,
             "ikki": 2,
             "uch": 3,
@@ -368,3 +370,174 @@ class UzbekNumberNormalizer:
                 output += token + " "
 
         return output.strip()
+
+
+class RussianNumberNormalizer:
+    UNITS = {
+        "ноль": 0,
+        "один": 1, "одна": 1, "одно": 1,
+        "два": 2, "две": 2,
+        "три": 3,
+        "четыре": 4,
+        "пять": 5,
+        "шесть": 6,
+        "семь": 7,
+        "восемь": 8,
+        "девять": 9,
+
+        "десять": 10,
+        "одиннадцать": 11,
+        "двенадцать": 12,
+        "тринадцать": 13,
+        "четырнадцать": 14,
+        "пятнадцать": 15,
+        "шестнадцать": 16,
+        "семнадцать": 17,
+        "восемнадцать": 18,
+        "девятнадцать": 19,
+    }
+
+    TENS = {
+        "двадцать": 20,
+        "тридцать": 30,
+        "сорок": 40,
+        "пятьдесят": 50,
+        "шестьдесят": 60,
+        "семьдесят": 70,
+        "восемьдесят": 80,
+        "девяносто": 90,
+    }
+
+    HUNDREDS = {
+        "сто": 100,
+        "двести": 200,
+        "триста": 300,
+        "четыреста": 400,
+        "пятьсот": 500,
+        "шестьсот": 600,
+        "семьсот": 700,
+        "восемьсот": 800,
+        "девятьсот": 900,
+    }
+
+    SCALES = {
+        "тысяча": 1000,
+        "тысячи": 1000,
+        "тысяч": 1000,
+
+        "миллион": 1_000_000,
+        "миллиона": 1_000_000,
+        "миллионов": 1_000_000,
+
+        "миллиард": 1_000_000_000,
+        "миллиарда": 1_000_000_000,
+        "миллиардов": 1_000_000_000,
+    }
+
+    NUMBER_WORDS = set(UNITS) | set(TENS) | set(HUNDREDS) | set(SCALES)
+
+    def normalize(self, text: str) -> str:
+        tokens = self.tokenize(text)
+
+        result: list[str] = []
+        buffer: list[str] = []
+
+        for token in tokens:
+            word = self.clean_token(token)
+
+            if word in self.NUMBER_WORDS:
+                buffer.append(word)
+                continue
+
+            self.flush_number_buffer(result, buffer)
+            buffer = []
+
+            result.append(token)
+
+        self.flush_number_buffer(result, buffer)
+
+        return self.detokenize(result)
+
+    def clean_token(self, token: str) -> str:
+        return token.lower().strip()
+
+    def tokenize(self, text: str) -> list[str]:
+        return re.findall(r"\w+|[^\w\s]", text, flags=re.UNICODE)
+
+    def is_punctuation(self, token: str) -> bool:
+        return bool(re.fullmatch(r"[^\w\s]+", token, flags=re.UNICODE))
+
+    def parse_number(self, words: list[str]) -> int | None:
+        total = 0
+        current = 0
+        found = False
+
+        for raw_word in words:
+            word = self.clean_token(raw_word)
+
+            if word in self.UNITS:
+                current += self.UNITS[word]
+                found = True
+
+            elif word in self.TENS:
+                current += self.TENS[word]
+                found = True
+
+            elif word in self.HUNDREDS:
+                current += self.HUNDREDS[word]
+                found = True
+
+            elif word in self.SCALES:
+                scale = self.SCALES[word]
+
+                if current == 0:
+                    current = 1
+
+                total += current * scale
+                current = 0
+                found = True
+
+            else:
+                return None
+
+        if not found:
+            return None
+
+        return total + current
+
+    def flush_number_buffer(self, result: list[str], buffer: list[str]) -> None:
+        if not buffer:
+            return
+
+        value = self.parse_number(buffer)
+
+        if value is None:
+            result.extend(buffer)
+        else:
+            result.append(str(value))
+
+    def detokenize(self, tokens: list[str]) -> str:
+        output = ""
+
+        for token in tokens:
+            if self.is_punctuation(token):
+                output = output.rstrip() + token + " "
+            else:
+                output += token + " "
+
+        return output.strip()
+
+
+class NumberNormalizer:
+    def __init__(self) -> None:
+        self.uz = UzbekNumberNormalizer()
+        self.ru = RussianNumberNormalizer()
+
+    def normalize(self, text: str, lang: str) -> str:
+        if lang == "uz":
+            return self.uz.normalize(text)
+
+        if lang == "ru":
+            return self.ru.normalize(text)
+
+        return text
