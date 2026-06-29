@@ -35,7 +35,7 @@ class GPU:
         else:
             return None
 
-        return gpus
+        return gpus if gpus != [] else None
     
     def _to_gb(self, value_on_bytes: int) -> int:
         if not isinstance(value_on_bytes, int):
