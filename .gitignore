@@ -1,5 +1,8 @@
 models/*
 storage/audio/*.webm
+storage/audio/*.mp3
+storage/audio/*.wav
+storage/audio/*.ogg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
