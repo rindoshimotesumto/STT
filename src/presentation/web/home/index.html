@@ -5,7 +5,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>STT Service</title>
-<link href="/static/css/style.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="static/css/style.css" rel="stylesheet"/>
 </head>
 <body>
 <main class="app">
@@ -175,6 +178,13 @@
 </div>
 </div>
 </div>
+<div aria-label="Audio language" class="audio-lang-selector" id="audioLangSelector">
+<span class="audio-lang-label" data-i18n="audioLangLabel">Audio language</span>
+<div class="audio-lang-options" id="audioLangOptions">
+<button class="audio-lang-btn" data-audio-lang="uz" type="button">O‘zbek</button>
+<button class="audio-lang-btn" data-audio-lang="ru" type="button">Русский</button>
+</div>
+</div>
 <div class="actions">
 <button class="action-button status-mode" disabled="" id="transcribeBtn" type="button">
 <span aria-hidden="true" class="button-status-dot"></span>
@@ -205,7 +215,8 @@
         The transcription result will appear here.
       </div>
 </section>
+
 </main>
-<script defer="" src="/static/js/app.js"></script>
+<script src="static/js/app.js"></script>
 </body>
 </html>

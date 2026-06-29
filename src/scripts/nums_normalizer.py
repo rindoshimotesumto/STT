@@ -533,11 +533,23 @@ class NumberNormalizer:
         self.uz = UzbekNumberNormalizer()
         self.ru = RussianNumberNormalizer()
 
+    def clean_stt_artifacts(self, text: str) -> str:
+        text = text.strip()
+        text = re.sub(r"\s*[\(\[]\s*\?\s*[\)\]]\s*$", "", text)
+        text = re.sub(r"([.!?])\s*[\(\[]\s*\?\s*[\)\]]\s*$", r"\1", text)
+        text = re.sub(r"\s+([,.!?;:])", r"\1", text)
+        text = re.sub(r"\s{2,}", " ", text)
+
+        return text.strip()
+
     def normalize(self, text: str, lang: str) -> str:
         if lang == "uz":
-            return self.uz.normalize(text)
+            normalized = self.uz.normalize(text)
 
-        if lang == "ru":
-            return self.ru.normalize(text)
+        elif lang == "ru":
+            normalized = self.ru.normalize(text)
 
-        return text
+        else:
+            normalized = text
+
+        return self.clean_stt_artifacts(normalized)

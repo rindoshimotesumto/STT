@@ -6,7 +6,7 @@ from fastapi import APIRouter, UploadFile, File, Form
 from src.service.stt import STT
 from src.service.timer import Timer
 from src.service.logs import get_logger
-from src.scripts.nums_normalizer import UzbekNumberNormalizer
+from src.scripts.nums_normalizer import UzbekNumberNormalizer, RussianNumberNormalizer
 from src.service.stt import AudioLang
 
 router = APIRouter(
@@ -17,6 +17,7 @@ router = APIRouter(
 file = Path(__file__)
 stt = STT()
 uzbek_number_normalizer = UzbekNumberNormalizer()
+russian_number_normalizer = RussianNumberNormalizer()
 
 logger = get_logger(f"./logs/{file.stem}.log")
 STORAGE_PATH = file.resolve().parent.parent.parent.parent.parent / "storage" / "audio"
@@ -36,15 +37,14 @@ async def transcribe(audio: UploadFile = File(...), lang: AudioLang = Form(Audio
     #
 
     # stt
-    with Timer() as stt_result:
-        result = await stt.start(audio_tmp_path, lang)
-
-    logger.info(f"STT duration: [{stt_result.duration:.2f} sec] on [device]")
+    result = await stt.start(audio_tmp_path, AudioLang(lang))
     #
-
+    
     # normalizer
+    normilizer = uzbek_number_normalizer if lang == AudioLang.uz else russian_number_normalizer
+    
     with Timer() as normalize_timer:
-        normalize_result = uzbek_number_normalizer.normalize(result.result)
+        normalize_result = normilizer.normalize(result.result)
 
     logger.info(f"Normalize duration: [{normalize_timer.duration:.2f} sec]")
     #
