@@ -1,6 +1,5 @@
 from typing import Any
 from pathlib import Path
-from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, Form
 
 from src.service.stt import STT
@@ -23,21 +22,19 @@ logger = get_logger(f"./logs/{file.stem}.log")
 STORAGE_PATH = file.resolve().parent.parent.parent.parent.parent / "storage" / "audio"
 
 @router.post("/stt")
-async def transcribe(audio: UploadFile = File(...), lang: AudioLang = Form(AudioLang.uz)) -> dict[str, Any]:
+def transcribe(audio: UploadFile = File(...), lang: AudioLang = Form(AudioLang.uz), display_name: str = "") -> dict[str, Any]:
     # save audio
-    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    ext = Path(audio.filename).suffix
-    audio_tmp_path = f"{STORAGE_PATH / f'audio_{current_time}{ext}'}"
+    audio_tmp_path = f"{STORAGE_PATH / audio.filename}"
 
     with Timer() as save_audio:
         with open(audio_tmp_path, "wb") as f:
-            f.write(await audio.read())
+            f.write(audio.file.read())
 
     logger.info(f"Audio save duration: [{save_audio.duration:.2f} sec]")
     #
 
     # stt
-    result = await stt.start(audio_tmp_path, AudioLang(lang))
+    result = stt.start(audio_tmp_path, AudioLang(lang))
     #
     
     # normalizer

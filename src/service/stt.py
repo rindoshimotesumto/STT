@@ -48,28 +48,20 @@ class STT:
             self.ru_model_ct2_path = MODELS_DIR / "universal-model-CT2-GPU"
             self.universal_model_ct2_path = MODELS_DIR / "universal-model-CT2-GPU"
 
-        # self.pipeline_uz = pipeline(
-        #     task="automatic-speech-recognition",
-        #     model=self.uz_model_path,
-        #     device=self._hf_device,
-        # )
-
-        # self.pipeline_ru = pipeline(
-        #     task="automatic-speech-recognition",
-        #     model=self.ru_model_path,
-        #     device=self._hf_device
-        # )
-
         self.ct2_uz = WhisperModel(
             str(self.uz_model_ct2_path),
             device=self._fw_device,
-            compute_type=self._compute_type
+            compute_type=self._compute_type,
+            cpu_threads=4,
+            num_workers=1
         )
 
         self.ct2_ru = WhisperModel(
             str(self.ru_model_ct2_path),
             device=self._fw_device,
-            compute_type=self._compute_type
+            compute_type=self._compute_type,
+            cpu_threads=4,
+            num_workers=1
         )
 
     def check_device(self) -> list[str] | None:
@@ -83,25 +75,12 @@ class STT:
             for gpu_id, gpu in gpus.items()
         ]
 
-    async def start(self, audio_path: str, audio_lang: AudioLang = AudioLang.uz, faster: bool = True) -> GetTextData:
-        if faster:
-            return await self.ct2(audio_path, audio_lang)
-
-        _pipeline = self.pipeline_uz if audio_lang == AudioLang.uz else self.pipeline_ru
-        _model = self.uz_model_path if audio_lang == AudioLang.uz else self.ru_model_path
-
-        result = await asyncio.to_thread(_pipeline, audio_path)
-        # result = _pipeline(audio_path)
-        
-        return TextData(
-           result=result["text"],
-           lang=audio_lang,
-           model=_model
-        ).get()
+    def start(self, audio_path: str, audio_lang: AudioLang = AudioLang.uz) -> GetTextData:
+        return self._ct2_sync(audio_path, audio_lang)
     
-    async def ct2(self, audio_path: str, audio_lang: AudioLang = AudioLang.uz) -> GetTextData:
+    def _ct2_sync(self, audio_path: str, audio_lang: AudioLang = AudioLang.uz) -> GetTextData:
         _ct2_model = self.ct2_uz
-        
+
         if audio_lang == AudioLang.ru:
             _ct2_model = self.ct2_ru
 
@@ -117,10 +96,15 @@ class STT:
 
             text = " ".join(segment.text for segment in segments).strip()
 
-        logger.info(f"stt duration [{stt_result.duration:.2f} sec] on [{self._fw_device}] lang [{audio_lang}] audio duration [{info.duration}]")
+        logger.info(
+            f"stt duration [{stt_result.duration:.2f} sec] "
+            f"on [{self._fw_device}] "
+            f"lang [{audio_lang}] "
+            f"audio duration [{info.duration}]"
+        )
 
         return TextData(
             result=text,
             lang=audio_lang,
-            model= self.uz_model_name if audio_lang == AudioLang.uz else self.ru_model_name
+            model=self.uz_model_name if audio_lang == AudioLang.uz else self.ru_model_name
         ).get()

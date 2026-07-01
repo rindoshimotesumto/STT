@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from src.presentation.api.routers.stt import router as STT_ROUTER
+from src.presentation.api.routers.stt import router as STT_ROUTER 
 
 file = Path(__file__)
 web_dir = file.resolve().parent.parent / "web" / "home"

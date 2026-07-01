@@ -17,7 +17,7 @@ class GPU:
 
     def get_devices(self) -> dict[int, GPUinfo] | bool | None:
         if not torch.cuda.is_available():
-            return False
+            return None
         
         gpus = {}
 
@@ -35,7 +35,7 @@ class GPU:
         else:
             return None
 
-        return gpus if gpus != [] else None
+        return gpus if gpus != {} else None
     
     def _to_gb(self, value_on_bytes: int) -> int:
         if not isinstance(value_on_bytes, int):

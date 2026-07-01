@@ -1,753 +1,1344 @@
-const qs = (selector) => document.querySelector(selector);
-const qsa = (selector) => [...document.querySelectorAll(selector)];
+const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const audioCaptureInput = document.getElementById("audioCaptureInput");
+    const fileInfo = document.getElementById("fileInfo");
+    const fileName = document.getElementById("fileName");
+    const fileSize = document.getElementById("fileSize");
+    const removeBtn = document.getElementById("removeBtn");
+    const transcribeBtn = document.getElementById("transcribeBtn");
+    const actionsWrap = transcribeBtn.closest(".actions");
+    const statusEl = document.getElementById("status");
+    const outputText = document.getElementById("outputText");
+    const copyResultBtn = document.getElementById("copyResultBtn");
+    const copyResultText = document.getElementById("copyResultText");
+    const downloadResultBtn = document.getElementById("downloadResultBtn");
+    const downloadResultText = document.getElementById("downloadResultText");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const playerPlayBtn = document.getElementById("playerPlayBtn");
+    const playerPlayIcon = document.getElementById("playerPlayIcon");
+    const playerProgress = document.getElementById("playerProgress");
+    const playerProgressFill = document.getElementById("playerProgressFill");
+    const playerTime = document.getElementById("playerTime");
+    const downloadAudioBtn = document.getElementById("downloadAudioBtn");
 
-const el = {
-  dropzone: qs('#dropzone'),
-  fileInput: qs('#fileInput'),
-  audioCaptureInput: qs('#audioCaptureInput'),
-  fileInfo: qs('#fileInfo'),
-  fileName: qs('#fileName'),
-  fileSize: qs('#fileSize'),
-  removeBtn: qs('#removeBtn'),
-  transcribeBtn: qs('#transcribeBtn'),
-  actions: qs('#transcribeBtn')?.closest('.actions'),
-  status: qs('#status'),
-  outputText: qs('#outputText'),
-  copyResultBtn: qs('#copyResultBtn'),
-  downloadResultBtn: qs('#downloadResultBtn'),
-  audioPlayer: qs('#audioPlayer'),
-  playerPlayBtn: qs('#playerPlayBtn'),
-  playerPlayIcon: qs('#playerPlayIcon'),
-  playerProgress: qs('#playerProgress'),
-  playerProgressFill: qs('#playerProgressFill'),
-  playerTime: qs('#playerTime'),
-  downloadAudioBtn: qs('#downloadAudioBtn'),
-  themeToggle: qs('#themeToggle'),
-  themeIcon: qs('#themeIcon'),
-  langMenu: qs('#langMenu'),
-  langToggle: qs('#langToggle'),
-  langButtons: qsa('.lang-btn'),
-  audioLangSelector: qs('#audioLangSelector'),
-  audioLangButtons: qsa('.audio-lang-btn'),
-  uploadModeBtn: qs('#uploadModeBtn'),
-  recordModeBtn: qs('#recordModeBtn'),
-  uploadPanel: qs('#uploadPanel'),
-  recordPanel: qs('#recordPanel'),
-  recordZone: qs('#recordZone'),
-  recordBtn: qs('#recordBtn'),
-  recordControls: qs('#recordControls'),
-  pauseRecordBtn: qs('#pauseRecordBtn'),
-  stopRecordBtn: qs('#stopRecordBtn'),
-  recordTimer: qs('#recordTimer'),
-  a11yWrap: qs('#a11yWrap'),
-  a11yToggle: qs('#a11yToggle'),
-  a11yPanel: qs('#a11yPanel'),
-  fontDecreaseBtn: qs('#fontDecreaseBtn'),
-  fontIncreaseBtn: qs('#fontIncreaseBtn'),
-  fontSizeValue: qs('#fontSizeValue'),
-  contrastToggleBtn: qs('#contrastToggleBtn'),
-  contrastToggleText: qs('#contrastToggleText'),
-};
+    const themeToggle = document.getElementById("themeToggle");
+    const themeIcon = document.getElementById("themeIcon");
+    const langMenu = document.getElementById("langMenu");
+    const langToggle = document.getElementById("langToggle");
+    const langButtons = document.querySelectorAll(".lang-btn");
+    const audioLangButtons = document.querySelectorAll(".audio-lang-btn");
+    const audioLangSelector = document.getElementById("audioLangSelector");
+    const uploadModeBtn = document.getElementById("uploadModeBtn");
+    const recordModeBtn = document.getElementById("recordModeBtn");
+    const uploadPanel = document.getElementById("uploadPanel");
+    const recordPanel = document.getElementById("recordPanel");
+    const recordZone = document.getElementById("recordZone");
+    const recordBtn = document.getElementById("recordBtn");
+    const recordControls = document.getElementById("recordControls");
+    const pauseRecordBtn = document.getElementById("pauseRecordBtn");
+    const stopRecordBtn = document.getElementById("stopRecordBtn");
+    const recordTimer = document.getElementById("recordTimer");
+    const voiceBars = document.getElementById("voiceBars");
+    const a11yWrap = document.getElementById("a11yWrap");
+    const a11yToggle = document.getElementById("a11yToggle");
+    const a11yPanel = document.getElementById("a11yPanel");
+    const fontDecreaseBtn = document.getElementById("fontDecreaseBtn");
+    const fontIncreaseBtn = document.getElementById("fontIncreaseBtn");
+    const fontSizeValue = document.getElementById("fontSizeValue");
+    const contrastToggleBtn = document.getElementById("contrastToggleBtn");
+    const contrastToggleText = document.getElementById("contrastToggleText");
 
-const MAX_SECONDS = 30;
-const MAX_FALLBACK_SIZE = 15 * 1024 * 1024;
-const API_URL = '/api/stt';
-const ALLOWED_EXTENSIONS = new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.webm']);
+    let selectedFile = null;
+    let selectedDisplayFileName = "";
+    let currentLang = localStorage.getItem("lang") || "en";
+    let selectedAudioLang = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordStartedAt = 0;
+    let recordTimerInterval = null;
+    let recordStopTimeout = null;
+    let recordedDurationSeconds = 0;
+    let pausedAt = 0;
+    let totalPausedMs = 0;
+    let previewObjectUrl = null;
+    let previewKnownDuration = null;
+    let currentStatusKey = "statusWaiting";
+    let currentStatusText = "";
+    let currentStatusType = "";
+    let currentOutputKey = "outputPlaceholder";
+    let currentOutputText = "";
+    let currentOutputPlaceholder = true;
+    let audioContext = null;
+    let analyserNode = null;
+    let analyserData = null;
+    let voiceAnimationId = null;
+    let currentFontPx = Number.parseInt(localStorage.getItem("a11yFontPx") || "14", 10);
+    if (!Number.isFinite(currentFontPx)) currentFontPx = 14;
+    let highContrastEnabled = localStorage.getItem("a11yHighContrast") === "true";
+    let lastSttResponse = null;
 
-const i18n = {
-  en: {
-    title: 'Speech to Text',
-    subtitle: 'Upload an audio file to get a text transcription.',
-    dropTitle: 'Drop audio here',
-    dropText: 'or click to choose a file',
-    uploadMode: 'Upload file',
-    recordMode: 'Record audio',
-    audioLangLabel: 'Audio language',
-    recordTitle: 'Record in browser',
-    recordText: 'Maximum recording length is 30 seconds',
-    recordBtn: 'Record',
-    recordHover: 'Record',
-    pauseRecordBtn: 'Pause',
-    resumeRecordBtn: 'Resume',
-    stopRecordBtn: 'Stop',
-    transcribeBtn: 'Start',
-    statusWaiting: 'Waiting for file',
-    statusWaitingRecording: 'Waiting for recording',
-    selectAudioLangStatus: 'Choose audio language',
-    statusChecking: 'Checking file...',
-    statusProcessing: 'Transcribing...',
-    statusRecording: 'Recording...',
-    statusPaused: 'Recording paused',
-    statusReady: 'Start',
-    statusError: 'Error',
-    outputPlaceholder: 'The transcription result will appear here.',
-    outputReady: 'Choose the audio language, then click “Start”.',
-    onlyAudio: 'Only popular audio formats can be uploaded: MP3, WAV, M4A, AAC, OGG, FLAC.',
-    audioTooLong: 'Audio length must not exceed 30 seconds.',
-    audioTooLarge: 'Audio is too large. Use a file up to 15 MB or 30 seconds.',
-    processingText: 'Audio sent to STT service. Waiting for result...',
-    failedText: 'Could not transcribe audio. Check backend endpoint /api/stt.',
-    noText: 'No text found.',
-    micError: 'Microphone is unavailable here. Open the page through HTTPS/localhost or upload an audio file.',
-    copiedResult: 'Copied',
-    downloadResult: 'Download',
-    copyResult: 'Copy',
-    fontSize: 'Text size',
-    contrast: 'Contrast',
-    contrastOn: 'On',
-    contrastOff: 'Off',
-  },
-  ru: {
-    title: 'Speech to Text',
-    subtitle: 'Загрузите аудио файл, чтобы получить текстовую расшифровку.',
-    dropTitle: 'Перетащите аудио сюда',
-    dropText: 'или нажмите, чтобы выбрать файл',
-    uploadMode: 'Загрузить файл',
-    recordMode: 'Записать звук',
-    audioLangLabel: 'Язык аудио',
-    recordTitle: 'Запись в браузере',
-    recordText: 'Максимальная длина записи — 30 секунд',
-    recordBtn: 'Записать',
-    recordHover: 'Запись',
-    pauseRecordBtn: 'Пауза',
-    resumeRecordBtn: 'Продолжить',
-    stopRecordBtn: 'Стоп',
-    transcribeBtn: 'Начать',
-    statusWaiting: 'Ожидание файла',
-    statusWaitingRecording: 'Ожидание записи',
-    selectAudioLangStatus: 'Выберите язык аудио',
-    statusChecking: 'Проверка файла...',
-    statusProcessing: 'Распознавание...',
-    statusRecording: 'Идёт запись...',
-    statusPaused: 'Запись на паузе',
-    statusReady: 'Начать',
-    statusError: 'Ошибка',
-    outputPlaceholder: 'Здесь появится результат распознавания.',
-    outputReady: 'Выберите язык аудио, затем нажмите «Начать».',
-    onlyAudio: 'Можно загрузить только популярные аудио форматы: MP3, WAV, M4A, AAC, OGG, FLAC.',
-    audioTooLong: 'Длина аудио не должна превышать 30 секунд.',
-    audioTooLarge: 'Файл слишком большой. Используйте файл до 15 МБ или до 30 секунд.',
-    processingText: 'Файл отправлен на STT сервис. Ожидается результат...',
-    failedText: 'Не удалось распознать аудио. Проверь backend endpoint /api/stt.',
-    noText: 'Текст не найден.',
-    micError: 'Микрофон здесь недоступен. Открой страницу через HTTPS/localhost или загрузите аудио файлом.',
-    copiedResult: 'Скопировано',
-    downloadResult: 'Скачать',
-    copyResult: 'Копировать',
-    fontSize: 'Шрифт',
-    contrast: 'Контраст',
-    contrastOn: 'Вкл',
-    contrastOff: 'Выкл',
-  },
-  uz: {
-    title: 'Speech to Text',
-    subtitle: 'Audio fayl yuklang va uning matn ko‘rinishidagi transkripsiyasini oling.',
-    dropTitle: 'Audioni shu yerga tashlang',
-    dropText: 'yoki fayl tanlash uchun bosing',
-    uploadMode: 'Fayl yuklash',
-    recordMode: 'Ovoz yozish',
-    audioLangLabel: 'Audio tili',
-    recordTitle: 'Brauzerda yozish',
-    recordText: 'Yozuv uzunligi 30 soniyadan oshmasin',
-    recordBtn: 'Yozish',
-    recordHover: 'Yozuv',
-    pauseRecordBtn: 'Pauza',
-    resumeRecordBtn: 'Davom etish',
-    stopRecordBtn: 'To‘xtatish',
-    transcribeBtn: 'Boshlash',
-    statusWaiting: 'Fayl kutilmoqda',
-    statusWaitingRecording: 'Yozuv kutilmoqda',
-    selectAudioLangStatus: 'Audio tilini tanlang',
-    statusChecking: 'Fayl tekshirilmoqda...',
-    statusProcessing: 'Tanish jarayoni...',
-    statusRecording: 'Yozilmoqda...',
-    statusPaused: 'Yozuv pauzada',
-    statusReady: 'Boshlash',
-    statusError: 'Xatolik',
-    outputPlaceholder: 'Tanish natijasi shu yerda chiqadi.',
-    outputReady: 'Audio tilini tanlang, keyin «Boshlash» tugmasini bosing.',
-    onlyAudio: 'Faqat mashhur audio formatlarni yuklash mumkin: MP3, WAV, M4A, AAC, OGG, FLAC.',
-    audioTooLong: 'Audio uzunligi 30 soniyadan oshmasin.',
-    audioTooLarge: 'Fayl juda katta. 15 MB gacha yoki 30 soniyagacha bo‘lgan audio ishlating.',
-    processingText: 'Audio STT servisga yuborildi. Natija kutilmoqda...',
-    failedText: 'Audioni tanib bo‘lmadi. Backend endpoint /api/stt ni tekshiring.',
-    noText: 'Matn topilmadi.',
-    micError: 'Bu yerda mikrofon mavjud emas. Sahifani HTTPS/localhost orqali oching yoki audio fayl yuklang.',
-    copiedResult: 'Nusxalandi',
-    downloadResult: 'Yuklab olish',
-    copyResult: 'Nusxa olish',
-    fontSize: 'Shrift',
-    contrast: 'Kontrast',
-    contrastOn: 'Yoqilgan',
-    contrastOff: 'O‘chiq',
-  },
-};
-
-const state = {
-  lang: localStorage.getItem('lang') || 'en',
-  theme: localStorage.getItem('theme') || 'light',
-  fontPx: clamp(Number.parseInt(localStorage.getItem('a11yFontPx') || '14', 10), 14, 20),
-  highContrast: localStorage.getItem('a11yHighContrast') === 'true',
-  mode: 'upload',
-  selectedFile: null,
-  selectedAudioLang: null,
-  objectUrl: null,
-  knownDuration: null,
-  resultText: '',
-  isProcessing: false,
-  isResultReady: false,
-  recorder: null,
-  chunks: [],
-  recordStartedAt: 0,
-  pausedAt: 0,
-  pausedMs: 0,
-  recordTimer: null,
-  recordStopper: null,
-};
-
-function t(key) {
-  return i18n[state.lang]?.[key] || i18n.en[key] || key;
-}
-
-function clamp(value, min, max) {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
-function formatBytes(bytes) {
-  if (!bytes) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
-}
-
-function formatTime(seconds) {
-  const safe = Math.max(0, Math.floor(seconds || 0));
-  return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
-}
-
-function getExtension(filename = '') {
-  const dot = filename.lastIndexOf('.');
-  return dot === -1 ? '' : filename.slice(dot).toLowerCase();
-}
-
-function replaySoft(node) {
-  if (!node) return;
-  node.classList.remove('soft-enter');
-  void node.offsetWidth;
-  node.classList.add('soft-enter');
-}
-
-function setOutput(text, placeholder = false) {
-  el.outputText.textContent = text;
-  el.outputText.classList.toggle('placeholder', placeholder);
-  replaySoft(el.outputText);
-}
-
-
-function setAction(kind, text, disabled = true) {
-  el.transcribeBtn.className = `action-button status-mode action-${kind}`;
-  el.transcribeBtn.disabled = disabled;
-  el.status.textContent = text;
-}
-
-function showAction() {
-  const wasHidden = el.actions?.classList.contains('is-hidden');
-  el.actions?.classList.remove('is-hidden');
-  if (wasHidden) replaySoft(el.actions);
-}
-
-
-function hideAction() {
-  el.actions?.classList.add('is-hidden');
-}
-
-function updateAction() {
-  if (state.isResultReady) {
-    hideAction();
-    return;
-  }
-
-  showAction();
-
-  if (state.isProcessing) {
-    setAction('processing', t('statusProcessing'), true);
-    return;
-  }
-
-  if (!state.selectedFile) {
-    const key = state.mode === 'record' ? 'statusWaitingRecording' : 'statusWaiting';
-    setAction('waiting', t(key), true);
-    return;
-  }
-
-  if (!state.selectedAudioLang) {
-    setAction('waiting-lang', t('selectAudioLangStatus'), true);
-    return;
-  }
-
-  setAction('ready', t('transcribeBtn'), false);
-}
-
-function resetResult() {
-  state.resultText = '';
-  state.isResultReady = false;
-  setOutput(t('outputPlaceholder'), true);
-  el.copyResultBtn.disabled = true;
-  el.downloadResultBtn.disabled = true;
-  showAction();
-}
-
-function resetAudioLang() {
-  state.selectedAudioLang = null;
-  el.audioLangButtons.forEach((btn) => btn.classList.remove('active'));
-}
-
-function setAudioLangVisible(isVisible) {
-  const wasHidden = !el.audioLangSelector.classList.contains('active');
-  el.audioLangSelector.classList.toggle('active', isVisible);
-  if (isVisible && wasHidden) replaySoft(el.audioLangSelector);
-}
-
-
-function applyLanguage(lang) {
-  state.lang = lang;
-  localStorage.setItem('lang', lang);
-  document.documentElement.lang = lang;
-  el.langToggle.textContent = lang.toUpperCase();
-
-  qsa('[data-i18n]').forEach((node) => {
-    const key = node.dataset.i18n;
-    if (key) node.textContent = t(key);
-  });
-
-  el.langButtons.forEach((btn) => {
-    btn.hidden = btn.dataset.lang === lang;
-  });
-
-  updateA11yLabels();
-  updateAction();
-
-  if (!state.resultText && !state.selectedFile) {
-    setOutput(t('outputPlaceholder'), true);
-  } else if (!state.resultText && state.selectedFile) {
-    setOutput(t('outputReady'), true);
-  }
-}
-
-function applyTheme(theme) {
-  state.theme = theme;
-  localStorage.setItem('theme', theme);
-  document.documentElement.dataset.theme = theme;
-  el.themeIcon.innerHTML = theme === 'dark'
-    ? '<path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79z"></path>'
-    : '<path d="M12 3v1"></path><path d="M12 20v1"></path><path d="M4.22 4.22l.7.7"></path><path d="M19.08 19.08l.7.7"></path><path d="M3 12h1"></path><path d="M20 12h1"></path><path d="M4.22 19.78l.7-.7"></path><path d="M19.08 4.92l.7-.7"></path><circle cx="12" cy="12" r="4"></circle>';
-}
-
-function updateA11yLabels() {
-  el.fontSizeValue.textContent = `${state.fontPx}px`;
-  el.contrastToggleText.textContent = state.highContrast ? t('contrastOn') : t('contrastOff');
-}
-
-function applyA11y() {
-  document.documentElement.style.setProperty('--user-text-size', `${state.fontPx}px`);
-  document.documentElement.dataset.a11yCustomFont = String(state.fontPx !== 14);
-  document.documentElement.dataset.contrast = state.highContrast ? 'high' : 'normal';
-  localStorage.setItem('a11yFontPx', String(state.fontPx));
-  localStorage.setItem('a11yHighContrast', String(state.highContrast));
-  updateA11yLabels();
-}
-
-function switchMode(mode) {
-  if (state.mode === mode) return;
-  state.mode = mode;
-  el.uploadModeBtn.classList.toggle('active', mode === 'upload');
-  el.recordModeBtn.classList.toggle('active', mode === 'record');
-  el.uploadPanel.classList.toggle('panel-hidden', mode !== 'upload');
-  el.recordPanel.classList.toggle('panel-hidden', mode !== 'record');
-
-  if (!state.selectedFile && !state.resultText) {
-    updateAction();
-  }
-}
-
-function setSelectedFile(file, knownDuration = null) {
-  if (!file) return;
-
-  state.selectedFile = file;
-  state.knownDuration = knownDuration;
-  resetResult();
-  resetAudioLang();
-  setAudioLangVisible(true);
-
-  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-  state.objectUrl = URL.createObjectURL(file);
-
-  el.fileName.textContent = file.name;
-  el.fileSize.textContent = `${formatBytes(file.size)}${knownDuration ? ` · ${formatTime(knownDuration)}` : ''}`;
-  el.fileInfo.classList.add('active');
-  replaySoft(el.fileInfo);
-
-  el.audioPlayer.src = state.objectUrl;
-  el.downloadAudioBtn.disabled = false;
-  updatePlayerTime();
-  setOutput(t('outputReady'), true);
-  updateAction();
-}
-
-function clearSelectedFile() {
-  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-  state.selectedFile = null;
-  state.selectedAudioLang = null;
-  state.objectUrl = null;
-  state.knownDuration = null;
-  state.resultText = '';
-  state.isResultReady = false;
-
-  el.fileInput.value = '';
-  el.audioCaptureInput.value = '';
-  el.fileInfo.classList.remove('active');
-  setAudioLangVisible(false);
-  resetAudioLang();
-  el.audioPlayer.removeAttribute('src');
-  el.audioPlayer.load();
-  el.playerProgressFill.style.width = '0%';
-  el.downloadAudioBtn.disabled = true;
-  el.copyResultBtn.disabled = true;
-  el.downloadResultBtn.disabled = true;
-
-  setOutput(t('outputPlaceholder'), true);
-  updateAction();
-}
-
-function readAudioDuration(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const audio = new Audio();
-    const cleanup = () => URL.revokeObjectURL(url);
-
-    audio.preload = 'metadata';
-    audio.onloadedmetadata = () => {
-      cleanup();
-      resolve(Number.isFinite(audio.duration) ? audio.duration : null);
+    const translations = {
+      en: {
+        title: "Speech to Text",
+        subtitle: "Upload an audio file to get a text transcription.",
+        dropTitle: "Drop audio here",
+        dropText: "or click to choose a file",
+        uploadMode: "Upload file",
+        recordMode: "Record audio",
+        audioLangLabel: "Audio language",
+        recordTitle: "Record in browser",
+        recordText: "Maximum recording length is 30 seconds",
+        recordBtn: "Record",
+        recordHover: "Record",
+        recordMaxTime: "max 30s",
+        pauseRecordBtn: "Pause",
+        resumeRecordBtn: "Resume",
+        stopRecordBtn: "Stop",
+        micPermissionDenied: "Microphone access denied or unavailable. Allow microphone access in browser settings and try again.",
+        micSecureContextDenied: "Microphone recording is blocked here. Open this page through HTTPS or localhost in a normal browser.",
+        micRequestStatus: "Microphone permission",
+        micRequestText: "Allow microphone access in the browser permission popup.",
+        micUnsupportedFallback: "Browser recording is not available here. Use the system audio recorder or open the page through HTTPS/localhost.",
+        recordingStatus: "Recording...",
+        recordingPausedStatus: "Recording paused",
+        recordedReady: "Recording ready",
+        recordingOutput: "Recording saved. Click “Start” to transcribe.",
+        recordingFileName: "Browser recording",
+        transcribeBtn: "Start",
+        previewTitle: "Preview",
+        outputTitle: "Output",
+        statusWaiting: "Waiting for file",
+        statusWaitingRecording: "Waiting for recording",
+        statusReady: "File ready",
+        selectAudioLangStatus: "Choose audio language",
+        selectAudioLangOutput: "Choose the audio language, then click “Start”.",
+        statusInvalid: "Invalid format",
+        statusProcessing: "Transcribing...",
+        statusChecking: "Checking file...",
+        statusDone: "Done",
+        statusError: "Error",
+        outputPlaceholder: "The transcription result will appear here.",
+        outputReady: "Click “Start” to begin transcription.",
+        checkingText: "Checking file duration...",
+        onlyAudio: "Only popular audio formats can be uploaded: MP3, WAV, M4A, AAC, OGG, FLAC.",
+        audioTooLong: "Audio length must not exceed 30 seconds.",
+        audioTooLarge: "Audio is too large. Use a file up to 15 MB or 30 seconds.",
+        processingText: "Audio sent to STT service. Waiting for result...",
+        noText: "No text found.",
+        failedText: "Could not transcribe audio. Check backend endpoint /api/stt.",
+        accessibilityTitle: "Accessibility",
+        fontSize: "Text size",
+        fontDefault: "Normal",
+        fontLarge: "Large",
+        contrast: "Contrast",
+        contrastOn: "On",
+        contrastOff: "Off",
+        copyResult: "Copy",
+        copiedResult: "Copied",
+        downloadResult: "Download",
+      },
+      ru: {
+        title: "Speech to Text",
+        subtitle: "Загрузите аудио файл, чтобы получить текстовую расшифровку.",
+        dropTitle: "Перетащите аудио сюда",
+        dropText: "или нажмите, чтобы выбрать файл",
+        uploadMode: "Загрузить файл",
+        recordMode: "Записать звук",
+        audioLangLabel: "Язык аудио",
+        recordTitle: "Запись в браузере",
+        recordText: "Максимальная длина записи — 30 секунд",
+        recordBtn: "Записать",
+        recordHover: "Запись",
+        recordMaxTime: "макс. 30 сек",
+        pauseRecordBtn: "Пауза",
+        resumeRecordBtn: "Продолжить",
+        stopRecordBtn: "Стоп",
+        micPermissionDenied: "Доступ к микрофону запрещён или недоступен. Разрешите микрофон в настройках браузера и попробуйте снова.",
+        micSecureContextDenied: "Запись с микрофона здесь заблокирована. Открой страницу через HTTPS или localhost в обычном браузере.",
+        micRequestStatus: "Разрешение микрофона",
+        micRequestText: "Разрешите доступ к микрофону во всплывающем окне браузера.",
+        micUnsupportedFallback: "Запись в браузере здесь недоступна. Используйте системную запись аудио или откройте страницу через HTTPS/localhost.",
+        recordingStatus: "Идёт запись...",
+        recordingPausedStatus: "Запись на паузе",
+        recordedReady: "Запись готова",
+        recordingOutput: "Запись сохранена. Нажмите “Старт”, чтобы распознать.",
+        recordingFileName: "Запись из браузера",
+        transcribeBtn: "Начать",
+        previewTitle: "Прослушать",
+        outputTitle: "Результат",
+        statusWaiting: "Ожидание файла",
+        statusWaitingRecording: "Ожидание записи",
+        statusReady: "Файл готов",
+        selectAudioLangStatus: "Выберите язык аудио",
+        selectAudioLangOutput: "Выберите язык аудио, затем нажмите “Старт”.",
+        statusInvalid: "Неверный формат",
+        statusProcessing: "Распознавание...",
+        statusChecking: "Проверка файла...",
+        statusDone: "Готово",
+        statusError: "Ошибка",
+        outputPlaceholder: "Здесь появится результат распознавания.",
+        outputReady: "Нажмите “Старт”, чтобы начать распознавание.",
+        checkingText: "Проверка длительности файла...",
+        onlyAudio: "Можно загрузить только популярные аудио форматы: MP3, WAV, M4A, AAC, OGG, FLAC.",
+        audioTooLong: "Длина аудио не должна превышать 30 секунд.",
+        audioTooLarge: "Файл слишком большой. Используйте файл до 15 МБ или до 30 секунд.",
+        processingText: "Аудио отправлено в STT сервис. Ожидание результата...",
+        noText: "Текст не найден.",
+        failedText: "Не удалось распознать аудио. Проверьте backend endpoint /api/stt.",
+        accessibilityTitle: "Спец. возможности",
+        fontSize: "Шрифт",
+        fontDefault: "Обычный",
+        fontLarge: "Крупный",
+        contrast: "Контраст",
+        contrastOn: "Вкл",
+        contrastOff: "Выкл",
+        copyResult: "Копировать",
+        copiedResult: "Скопировано",
+        downloadResult: "Скачать",
+      },
+      uz: {
+        title: "Speech to Text",
+        subtitle: "Audio fayl yuklang va uning matn ko‘rinishidagi transkripsiyasini oling.",
+        dropTitle: "Audioni shu yerga tashlang",
+        dropText: "yoki fayl tanlash uchun bosing",
+        uploadMode: "Fayl yuklash",
+        recordMode: "Ovoz yozish",
+        audioLangLabel: "Audio tili",
+        recordTitle: "Brauzerda yozish",
+        recordText: "Yozuv uzunligi 30 soniyadan oshmasin",
+        recordBtn: "Yozish",
+        recordHover: "Yozuv",
+        recordMaxTime: "maks. 30 soniya",
+        pauseRecordBtn: "Pauza",
+        resumeRecordBtn: "Davom etish",
+        stopRecordBtn: "To‘xtatish",
+        micPermissionDenied: "Mikrofonga ruxsat berilmagan yoki mavjud emas. Brauzer sozlamalarida mikrofonni yoqing va qayta urinib ko‘ring.",
+        micSecureContextDenied: "Bu joyda mikrofon yozuvi bloklangan. Sahifani oddiy brauzerda HTTPS yoki localhost orqali oching.",
+        micRequestStatus: "Mikrofon ruxsati",
+        micRequestText: "Brauzer oynasida mikrofonga ruxsat bering.",
+        micUnsupportedFallback: "Bu yerda brauzer orqali yozish mavjud emas. Tizim audio yozuvchisidan foydalaning yoki sahifani HTTPS/localhost orqali oching.",
+        recordingStatus: "Yozilmoqda...",
+        recordingPausedStatus: "Yozuv pauzada",
+        recordedReady: "Yozuv tayyor",
+        recordingOutput: "Yozuv saqlandi. Tanitish uchun “Start” tugmasini bosing.",
+        recordingFileName: "Brauzer yozuvi",
+        transcribeBtn: "Boshlash",
+        previewTitle: "Eshitib ko‘rish",
+        outputTitle: "Natija",
+        statusWaiting: "Fayl kutilmoqda",
+        statusWaitingRecording: "Yozuv kutilmoqda",
+        statusReady: "Fayl tayyor",
+        selectAudioLangStatus: "Audio tilini tanlang",
+        selectAudioLangOutput: "Audio tilini tanlang, keyin “Start” tugmasini bosing.",
+        statusInvalid: "Noto‘g‘ri format",
+        statusProcessing: "Tanish jarayoni...",
+        statusChecking: "Fayl tekshirilmoqda...",
+        statusDone: "Tayyor",
+        statusError: "Xatolik",
+        outputPlaceholder: "Tanish natijasi shu yerda chiqadi.",
+        outputReady: "Tanishni boshlash uchun “Start” tugmasini bosing.",
+        checkingText: "Fayl davomiyligi tekshirilmoqda...",
+        onlyAudio: "Faqat ommabop audio formatlarni yuklash mumkin: MP3, WAV, M4A, AAC, OGG, FLAC.",
+        audioTooLong: "Audio uzunligi 30 soniyadan oshmasligi kerak.",
+        audioTooLarge: "Fayl hajmi juda katta. 15 MB gacha yoki 30 soniyagacha bo‘lgan fayldan foydalaning.",
+        processingText: "Audio STT servisiga yuborildi. Natija kutilmoqda...",
+        noText: "Matn topilmadi.",
+        failedText: "Audioni tanib bo‘lmadi. Backend endpoint /api/stt ni tekshiring.",
+        accessibilityTitle: "Maxsus imkoniyat",
+        fontSize: "Shrift",
+        fontDefault: "Oddiy",
+        fontLarge: "Katta",
+        contrast: "Kontrast",
+        contrastOn: "Yoqilgan",
+        contrastOff: "O‘chirilgan",
+        copyResult: "Nusxa olish",
+        copiedResult: "Nusxa olindi",
+        downloadResult: "Yuklab olish",
+      }
     };
-    audio.onerror = () => {
-      cleanup();
-      reject(new Error('duration_unavailable'));
-    };
-    audio.src = url;
-  });
-}
 
-async function handleFile(file, knownDuration = null) {
-  if (!file) return;
-
-  const extension = getExtension(file.name);
-  const isAudio = file.type.startsWith('audio/') || ALLOWED_EXTENSIONS.has(extension);
-
-  if (!isAudio || !ALLOWED_EXTENSIONS.has(extension)) {
-    clearSelectedFile();
-    setAction('error', t('statusError'), true);
-    setOutput(t('onlyAudio'), true);
-    return;
-  }
-
-  setAction('checking', t('statusChecking'), true);
-  setOutput(t('statusChecking'), true);
-
-  try {
-    const duration = knownDuration ?? await readAudioDuration(file);
-    if (duration && duration > MAX_SECONDS + 0.5) {
-      clearSelectedFile();
-      setAction('error', t('statusError'), true);
-      setOutput(t('audioTooLong'), true);
-      return;
+    function t(key) {
+      return translations[currentLang][key] || translations.en[key] || key;
     }
-    setSelectedFile(file, duration);
-  } catch {
-    if (file.size > MAX_FALLBACK_SIZE) {
-      clearSelectedFile();
-      setAction('error', t('statusError'), true);
-      setOutput(t('audioTooLarge'), true);
-      return;
+
+    function applyAudioLanguage(lang) {
+      selectedAudioLang = ["uz", "ru"].includes(lang) ? lang : null;
+      audioLangButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.audioLang === selectedAudioLang);
+      });
+
+      if (selectedFile && selectedAudioLang && currentStatusKey === "selectAudioLangStatus") {
+        transcribeBtn.disabled = false;
+        setStatusKey("statusReady");
+        setOutputKey("outputReady", true);
+      }
     }
-    setSelectedFile(file, null);
-  }
-}
 
-async function transcribe() {
-  if (!state.selectedFile || !state.selectedAudioLang || state.isProcessing) return;
 
-  state.isProcessing = true;
-  updateAction();
-  setOutput(t('processingText'), true);
+    function clampTextSize(value) {
+      return Math.min(20, Math.max(14, Number.parseInt(value, 10) || 14));
+    }
 
-  const formData = new FormData();
-  formData.append('audio', state.selectedFile);
-  formData.append('lang', state.selectedAudioLang);
+    function updateAccessibilityLabels() {
+      if (fontSizeValue) {
+        fontSizeValue.textContent = `${currentFontPx}px`;
+      }
+      if (contrastToggleText) {
+        contrastToggleText.textContent = highContrastEnabled ? t("contrastOn") : t("contrastOff");
+      }
+    }
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      body: formData,
+    function applyA11yFont(sizePx) {
+      currentFontPx = clampTextSize(sizePx);
+      localStorage.setItem("a11yFontPx", String(currentFontPx));
+      document.documentElement.style.setProperty("--a11y-font-size", `${currentFontPx}px`);
+      document.documentElement.dataset.a11yCustomFont = currentFontPx === 14 ? "false" : "true";
+      updateAccessibilityLabels();
+    }
+
+    function applyHighContrast(enabled) {
+      highContrastEnabled = Boolean(enabled);
+      localStorage.setItem("a11yHighContrast", String(highContrastEnabled));
+      document.documentElement.dataset.contrast = highContrastEnabled ? "high" : "normal";
+      updateAccessibilityLabels();
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem("lang", lang);
+      langToggle.textContent = lang.toUpperCase();
+      langButtons.forEach((button) => {
+        const isCurrent = button.dataset.lang === lang;
+        button.classList.toggle("active", isCurrent);
+        button.classList.toggle("is-hidden", isCurrent);
+      });
+      document.documentElement.lang = lang;
+
+      document.querySelectorAll("[data-i18n]").forEach((element) => {
+        const key = element.dataset.i18n;
+        element.textContent = t(key);
+      });
+
+      if (currentStatusKey) {
+        applyStatus(t(currentStatusKey), currentStatusType);
+      } else {
+        applyStatus(currentStatusText, currentStatusType);
+      }
+
+      if (currentOutputKey) {
+        applyOutput(t(currentOutputKey), currentOutputPlaceholder);
+      } else {
+        applyOutput(currentOutputText, currentOutputPlaceholder);
+      }
+
+      updateAccessibilityLabels();
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem("theme", theme);
+
+      if (theme === "dark") {
+        themeIcon.classList.add("moon-icon");
+        themeIcon.innerHTML = `
+          <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
+        `;
+      } else {
+        themeIcon.classList.remove("moon-icon");
+        themeIcon.innerHTML = `
+          <path d="M12 3v1" />
+          <path d="M12 20v1" />
+          <path d="M4.22 4.22l.7.7" />
+          <path d="M19.08 19.08l.7.7" />
+          <path d="M3 12h1" />
+          <path d="M20 12h1" />
+          <path d="M4.22 19.78l.7-.7" />
+          <path d="M19.08 4.92l.7-.7" />
+          <circle cx="12" cy="12" r="4" />
+        `;
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return "0 B";
+
+      const units = ["B", "KB", "MB", "GB"];
+      const index = Math.floor(Math.log(bytes) / Math.log(1024));
+      const size = bytes / Math.pow(1024, index);
+
+      return `${size.toFixed(1)} ${units[index]}`;
+    }
+
+    function isStartReadyStatus() {
+      return Boolean(
+        selectedFile &&
+        selectedAudioLang &&
+        !transcribeBtn.disabled &&
+        !["statusProcessing", "statusChecking", "statusInvalid", "recordingStatus", "recordingPausedStatus", "micRequestStatus"].includes(currentStatusKey)
+      );
+    }
+
+    function applyStatus(text, type = "") {
+      const isDone = currentStatusKey === "statusDone" && type === "success";
+      const isReady = !isDone && isStartReadyStatus();
+      statusEl.textContent = isReady ? t("transcribeBtn") : text;
+      statusEl.className = "status";
+
+      transcribeBtn.classList.toggle("status-mode", !isReady);
+      transcribeBtn.classList.toggle("action-ready", isReady);
+      transcribeBtn.classList.toggle("action-success", isDone);
+      transcribeBtn.classList.toggle("action-error", type === "error" && !isReady);
+      transcribeBtn.classList.toggle("action-recording", type === "recording" && !isReady);
+      transcribeBtn.classList.toggle("action-processing", currentStatusKey === "statusProcessing" && !isReady);
+      transcribeBtn.classList.toggle("action-checking", currentStatusKey === "statusChecking" && !isReady);
+      transcribeBtn.classList.toggle("action-waiting-lang", currentStatusKey === "selectAudioLangStatus" && !isReady);
+    }
+
+    function setStatus(text, type = "") {
+      currentStatusKey = null;
+      currentStatusText = text;
+      currentStatusType = type;
+      applyStatus(text, type);
+    }
+
+    function setStatusKey(key, type = "") {
+      currentStatusKey = key;
+      currentStatusText = "";
+      currentStatusType = type;
+      applyStatus(t(key), type);
+    }
+
+function applyOutput(text, placeholder = false) {
+      outputText.classList.add("output-fade");
+
+      window.setTimeout(() => {
+        outputText.textContent = text;
+        outputText.classList.toggle("placeholder", placeholder);
+        outputText.classList.remove("output-fade");
+      }, 90);
+
+      const isEmpty = placeholder || !text.trim();
+      copyResultBtn.disabled = isEmpty;
+      downloadResultBtn.disabled = isEmpty;
+      copyResultText.textContent = t("copyResult");
+      downloadResultText.textContent = t("downloadResult");
+      downloadResultBtn.setAttribute("aria-label", t("downloadResult"));
+    }
+
+    function setOutput(text, placeholder = false) {
+      currentOutputKey = null;
+      currentOutputText = text;
+      currentOutputPlaceholder = placeholder;
+      applyOutput(text, placeholder);
+    }
+
+    function getReadableRequestError(error) {
+      const message = String(error?.message || "").trim();
+
+      if (!message || message === "Failed to fetch" || error instanceof TypeError) {
+        return t("failedText");
+      }
+
+      if (message === "STT request failed") {
+        return t("failedText");
+      }
+
+      return message;
+    }
+
+    function setOutputKey(key, placeholder = false) {
+      currentOutputKey = key;
+      currentOutputText = "";
+      currentOutputPlaceholder = placeholder;
+      applyOutput(t(key), placeholder);
+    }
+
+    function getTimestampFileName() {
+      const now = new Date();
+      const dateParts = [
+        now.getFullYear().toString(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0")
+      ];
+      const timeParts = [
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0")
+      ];
+
+      return `audio_${dateParts.join("-")}_${timeParts.join("-")}`;
+    }
+
+    function getUuidAudioFileName(extension = "webm") {
+      const uuid = window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+
+      return `audio_${uuid}.${extension}`;
+    }
+
+    function getDisplayAudioFileName(extension = "webm") {
+      return `${getTimestampFileName()}.${extension}`;
+    }
+
+    function formatPlayerTime(seconds) {
+      if (!Number.isFinite(seconds)) return "00:00";
+
+      const safeSeconds = Math.max(0, Math.floor(seconds));
+      const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
+      const secs = String(safeSeconds % 60).padStart(2, "0");
+      return `${minutes}:${secs}`;
+    }
+
+    function getDisplayDurationSeconds(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0) return null;
+      return Math.max(1, Math.floor(seconds));
+    }
+
+    function formatFileDuration(seconds) {
+      const displaySeconds = getDisplayDurationSeconds(seconds);
+      return displaySeconds ? `${displaySeconds}s` : "";
+    }
+
+    function setPlayIcon(isPlaying) {
+      playerPlayIcon.innerHTML = isPlaying
+        ? `<path d="M8 5v14" /><path d="M16 5v14" />`
+        : `<path d="M8 5v14l11-7-11-7Z" />`;
+    }
+
+    function getDisplayDuration() {
+      if (Number.isFinite(previewKnownDuration) && previewKnownDuration > 0) return previewKnownDuration;
+
+      const nativeDuration = audioPlayer.duration;
+      if (Number.isFinite(nativeDuration) && nativeDuration > 0) return nativeDuration;
+      return 0;
+    }
+
+    function updatePlayerUI() {
+      const duration = getDisplayDuration();
+      const current = audioPlayer.currentTime || 0;
+      const progress = duration > 0 ? (current / duration) * 100 : 0;
+
+      playerProgressFill.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+      playerTime.textContent = `${formatPlayerTime(current)} / ${formatPlayerTime(duration)}`;
+    }
+
+    function setAudioPreview(file, knownDuration = null) {
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+      }
+
+      audioPlayer.pause();
+      const displayDuration = getDisplayDurationSeconds(knownDuration);
+      previewKnownDuration = displayDuration || null;
+      previewObjectUrl = URL.createObjectURL(file);
+      audioPlayer.src = previewObjectUrl;
+      audioPlayer.load();
+      downloadAudioBtn.disabled = false;
+      downloadAudioBtn.setAttribute("download", file.name);
+      setPlayIcon(false);
+      playerProgressFill.style.width = "0%";
+      playerTime.textContent = `00:00 / ${formatPlayerTime(getDisplayDuration())}`;
+      setTimeout(updatePlayerUI, 0);
+      setTimeout(updatePlayerUI, 300);
+    }
+
+    function clearAudioPreview() {
+      audioPlayer.pause();
+      audioPlayer.removeAttribute("src");
+      audioPlayer.load();
+      setPlayIcon(false);
+      playerProgressFill.style.width = "0%";
+      playerTime.textContent = "00:00 / 00:00";
+      downloadAudioBtn.disabled = true;
+      previewKnownDuration = null;
+
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+    }
+
+    const allowedAudioExtensions = ["mp3", "wav", "m4a", "aac", "ogg", "flac", "webm"];
+    const allowedAudioTypes = [
+      "audio/mpeg",
+      "audio/mp3",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/mp4",
+      "audio/aac",
+      "audio/ogg",
+      "application/ogg",
+      "audio/flac",
+      "audio/x-flac",
+      "audio/webm"
+    ];
+    const maxAudioDurationSeconds = 30;
+    const maxFallbackFileSizeBytes = 15 * 1024 * 1024;
+
+    function resetSelectedFile() {
+      selectedFile = null;
+      selectedDisplayFileName = "";
+      fileInput.value = "";
+      if (audioCaptureInput) audioCaptureInput.value = "";
+      fileInfo.classList.remove("active");
+      audioLangSelector.classList.remove("active");
+      actionsWrap.classList.remove("is-hidden");
+      applyAudioLanguage(null);
+      clearAudioPreview();
+      transcribeBtn.disabled = true;
+    }
+
+    function isAllowedAudioFile(file) {
+      const extension = file.name.split(".").pop().toLowerCase();
+      return allowedAudioExtensions.includes(extension) || allowedAudioTypes.includes(file.type);
+    }
+
+    function getAudioDuration(file) {
+      return new Promise((resolve) => {
+        const audio = document.createElement("audio");
+        const objectUrl = URL.createObjectURL(file);
+        let resolved = false;
+
+        function finish(duration) {
+          if (resolved) return;
+          resolved = true;
+          URL.revokeObjectURL(objectUrl);
+          audio.removeAttribute("src");
+          resolve(duration);
+        }
+
+        audio.preload = "metadata";
+        audio.onloadedmetadata = () => finish(audio.duration);
+        audio.onerror = () => finish(null);
+        audio.src = objectUrl;
+
+        setTimeout(() => finish(null), 3000);
+      });
+    }
+
+    async function handleFile(file) {
+      if (!file) return;
+
+      if (!isAllowedAudioFile(file)) {
+        resetSelectedFile();
+        setStatusKey("statusInvalid", "error");
+        setOutputKey("onlyAudio", true);
+        return;
+      }
+
+      setStatusKey("statusChecking");
+      setOutputKey("checkingText", true);
+
+      const duration = await getAudioDuration(file);
+
+      if (Number.isFinite(duration) && duration > maxAudioDurationSeconds) {
+        resetSelectedFile();
+        setStatusKey("statusInvalid", "error");
+        setOutputKey("audioTooLong", true);
+        return;
+      }
+
+      if (!Number.isFinite(duration) && file.size > maxFallbackFileSizeBytes) {
+        resetSelectedFile();
+        setStatusKey("statusInvalid", "error");
+        setOutputKey("audioTooLarge", true);
+        return;
+      }
+
+      selectedFile = file;
+      selectedDisplayFileName = file.name;
+      fileName.textContent = selectedDisplayFileName;
+      const durationLabel = formatFileDuration(duration);
+      fileSize.textContent = `${formatBytes(file.size)}${durationLabel ? ` · ${durationLabel}` : ""}`;
+      fileInfo.classList.add("active");
+      audioLangSelector.classList.add("active");
+      actionsWrap.classList.remove("is-hidden");
+      applyAudioLanguage(null);
+      setAudioPreview(file, Number.isFinite(duration) ? duration : null);
+      transcribeBtn.disabled = true;
+
+      setStatusKey("selectAudioLangStatus");
+      setOutputKey("selectAudioLangOutput", true);
+    }
+
+
+
+    function showPanel(mode) {
+      const isRecord = mode === "record";
+      uploadPanel.classList.toggle("panel-hidden", isRecord);
+      recordPanel.classList.toggle("panel-hidden", !isRecord);
+      uploadModeBtn.classList.toggle("active", !isRecord);
+      recordModeBtn.classList.toggle("active", isRecord);
+    }
+
+    function isRecordModeActive() {
+      return !recordPanel.classList.contains("panel-hidden");
+    }
+
+    function setIdleStatusForCurrentMode() {
+      setStatusKey(isRecordModeActive() ? "statusWaitingRecording" : "statusWaiting");
+    }
+
+    function getBestRecordingMimeType() {
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4"
+      ];
+
+      if (!window.MediaRecorder) return "";
+      return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+    }
+
+    function getRecordingExtension(mimeType) {
+      if (mimeType.includes("ogg")) return "ogg";
+      if (mimeType.includes("mp4")) return "m4a";
+      return "webm";
+    }
+
+    function formatRecordTime(seconds) {
+      const safeSeconds = Math.max(0, Math.min(maxAudioDurationSeconds, Math.floor(seconds)));
+      const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
+      const secs = String(safeSeconds % 60).padStart(2, "0");
+      return `${minutes}:${secs}`;
+    }
+
+    function formatRecordTimerLabel(seconds) {
+      return `${formatRecordTime(seconds)} / ${formatRecordTime(maxAudioDurationSeconds)}`;
+    }
+
+    function setRecordTimer(seconds) {
+      const current = recordTimer.querySelector(".timer-current");
+      const total = recordTimer.querySelector(".timer-total");
+      if (current && total) {
+        current.textContent = formatRecordTime(seconds);
+        total.textContent = `/ ${formatRecordTime(maxAudioDurationSeconds)}`;
+      } else {
+        recordTimer.textContent = formatRecordTimerLabel(seconds);
+      }
+    }
+
+    function getCurrentRecordingSeconds() {
+      if (!recordStartedAt) return recordedDurationSeconds;
+      const now = mediaRecorder && mediaRecorder.state === "paused" && pausedAt ? pausedAt : Date.now();
+      return Math.max(0, (now - recordStartedAt - totalPausedMs) / 1000);
+    }
+
+    function updateRecordTimer() {
+      recordedDurationSeconds = getCurrentRecordingSeconds();
+      setRecordTimer(recordedDurationSeconds);
+    }
+
+
+    function resetVoiceBars() {
+      if (!voiceBars) return;
+      voiceBars.querySelectorAll(".voice-bar").forEach((bar) => {
+        bar.style.height = "5px";
+        bar.style.opacity = "0.24";
+      });
+    }
+
+    function stopVoiceMeter() {
+      if (voiceAnimationId) {
+        cancelAnimationFrame(voiceAnimationId);
+        voiceAnimationId = null;
+      }
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+      }
+      analyserNode = null;
+      analyserData = null;
+      resetVoiceBars();
+    }
+
+    function startVoiceMeter(stream) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx || !voiceBars) return;
+
+        audioContext = new AudioCtx();
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 1024;
+        analyserNode.smoothingTimeConstant = 0.45;
+        analyserData = new Uint8Array(analyserNode.fftSize);
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyserNode);
+
+        const bars = Array.from(voiceBars.querySelectorAll(".voice-bar"));
+        const center = (bars.length - 1) / 2;
+        let visualLevel = 0;
+
+        const render = () => {
+          if (!analyserNode || !analyserData) return;
+
+          analyserNode.getByteTimeDomainData(analyserData);
+
+          let sumSquares = 0;
+          for (let i = 0; i < analyserData.length; i++) {
+            const centered = (analyserData[i] - 128) / 128;
+            sumSquares += centered * centered;
+          }
+
+          const rms = Math.sqrt(sumSquares / analyserData.length);
+          const targetLevel = Math.min(1, Math.pow(rms * 5.6, 0.85));
+          visualLevel += (targetLevel - visualLevel) * 0.45;
+
+          bars.forEach((bar, index) => {
+            const distance = Math.abs(index - center);
+            const shape = Math.max(0.28, 1 - distance * 0.105);
+            const height = 5 + visualLevel * 29 * shape;
+            bar.style.height = `${Math.max(5, Math.min(34, height))}px`;
+            bar.style.opacity = `${0.24 + visualLevel * 0.64}`;
+          });
+
+          voiceAnimationId = requestAnimationFrame(render);
+        };
+
+        render();
+      } catch (error) {
+        resetVoiceBars();
+      }
+    }
+
+    function resetRecordingUI() {
+      recordControls.classList.remove("active");
+      recordZone.classList.remove("is-recording");
+      pauseRecordBtn.textContent = t("pauseRecordBtn");
+      setRecordTimer(0);
+      stopVoiceMeter();
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
+        if (mediaRecorder.state === "paused" && pausedAt) {
+          totalPausedMs += Date.now() - pausedAt;
+          pausedAt = 0;
+        }
+        updateRecordTimer();
+        mediaRecorder.stop();
+      }
+    }
+
+    function toggleRecordingPause() {
+      if (!mediaRecorder) return;
+
+      if (mediaRecorder.state === "recording") {
+        mediaRecorder.pause();
+        pausedAt = Date.now();
+        clearInterval(recordTimerInterval);
+        clearTimeout(recordStopTimeout);
+        recordTimerInterval = null;
+        recordStopTimeout = null;
+        pauseRecordBtn.textContent = t("resumeRecordBtn");
+        setStatusKey("recordingPausedStatus");
+        return;
+      }
+
+      if (mediaRecorder.state === "paused") {
+        if (pausedAt) {
+          totalPausedMs += Date.now() - pausedAt;
+          pausedAt = 0;
+        }
+        mediaRecorder.resume();
+        pauseRecordBtn.textContent = t("pauseRecordBtn");
+        setStatusKey("recordingStatus", "recording");
+        updateRecordTimer();
+        recordTimerInterval = setInterval(updateRecordTimer, 250);
+        const remainingMs = Math.max(0, (maxAudioDurationSeconds - recordedDurationSeconds) * 1000);
+        recordStopTimeout = setTimeout(stopRecording, remainingMs);
+      }
+    }
+
+    function canUseBrowserRecorder() {
+      return Boolean(
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia &&
+        window.MediaRecorder
+      );
+    }
+
+    function openNativeAudioCapture() {
+      if (!audioCaptureInput) {
+        setStatusKey("statusWaitingRecording");
+        setOutputKey("micSecureContextDenied", true);
+        return;
+      }
+
+      setStatusKey("statusWaitingRecording");
+      audioCaptureInput.click();
+    }
+
+    async function requestMicrophoneStream() {
+      if (!canUseBrowserRecorder()) {
+        setStatusKey("micRequestStatus");
+        setOutputKey("micUnsupportedFallback", true);
+        openNativeAudioCapture();
+        return null;
+      }
+
+      setStatusKey("micRequestStatus");
+      setOutputKey("micRequestText", true);
+
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          await navigator.permissions.query({ name: "microphone" }).catch(() => null);
+        }
+
+        return await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+      } catch (error) {
+        const isBlockedByContext = !window.isSecureContext && location.protocol !== "http:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+
+        setStatusKey("statusWaitingRecording");
+
+        if (isBlockedByContext) {
+          setOutputKey("micSecureContextDenied", true);
+        } else if (error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
+          setOutputKey("micPermissionDenied", true);
+        } else {
+          setOutputKey("micPermissionDenied", true);
+        }
+
+        openNativeAudioCapture();
+        return null;
+      }
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await requestMicrophoneStream();
+        if (!stream) return;
+
+        const mimeType = getBestRecordingMimeType();
+        const options = mimeType ? { mimeType } : undefined;
+
+        recordedChunks = [];
+        recordedDurationSeconds = 0;
+        pausedAt = 0;
+        totalPausedMs = 0;
+        mediaRecorder = new MediaRecorder(stream, options);
+
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+          if (event.data && event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        });
+
+        mediaRecorder.addEventListener("stop", () => {
+          clearInterval(recordTimerInterval);
+          clearTimeout(recordStopTimeout);
+          recordTimerInterval = null;
+          recordStopTimeout = null;
+
+          stream.getTracks().forEach((track) => track.stop());
+
+          recordedDurationSeconds = Math.max(recordedDurationSeconds, getCurrentRecordingSeconds());
+          const finalMimeType = mediaRecorder.mimeType || mimeType || "audio/webm";
+          const extension = getRecordingExtension(finalMimeType);
+          const blob = new Blob(recordedChunks, { type: finalMimeType });
+          const duration = Math.min(maxAudioDurationSeconds, getDisplayDurationSeconds(recordedDurationSeconds) || 1);
+          const file = new File([blob], getUuidAudioFileName(extension), { type: finalMimeType });
+          const displayFileName = getDisplayAudioFileName(extension);
+
+          selectedFile = file;
+          selectedDisplayFileName = displayFileName;
+          fileName.textContent = selectedDisplayFileName;
+          fileSize.textContent = `${formatBytes(file.size)} · ${duration}s`;
+          fileInfo.classList.add("active");
+          audioLangSelector.classList.add("active");
+          actionsWrap.classList.remove("is-hidden");
+          applyAudioLanguage(null);
+          setAudioPreview(file, duration);
+          transcribeBtn.disabled = true;
+
+          resetRecordingUI();
+
+          setStatusKey("selectAudioLangStatus");
+          setOutputKey("selectAudioLangOutput", true);
+          mediaRecorder = null;
+        });
+
+        recordStartedAt = Date.now();
+        setRecordTimer(0);
+        transcribeBtn.disabled = true;
+        mediaRecorder.start();
+
+        recordZone.classList.add("is-recording");
+        recordControls.classList.add("active");
+        startVoiceMeter(stream);
+        pauseRecordBtn.textContent = t("pauseRecordBtn");
+        setStatusKey("recordingStatus", "recording");
+        setOutputKey("recordText", true);
+
+        recordTimerInterval = setInterval(updateRecordTimer, 250);
+        recordStopTimeout = setTimeout(stopRecording, maxAudioDurationSeconds * 1000);
+      } catch (error) {
+        resetRecordingUI();
+        setStatusKey("statusWaitingRecording");
+        setOutputKey("micPermissionDenied", true);
+      }
+    }
+
+        fileInput.addEventListener("change", () => {
+      handleFile(fileInput.files[0]);
     });
 
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload.detail || payload.message || response.statusText);
+    if (audioCaptureInput) {
+      audioCaptureInput.addEventListener("change", () => {
+        handleFile(audioCaptureInput.files[0]);
+      });
     }
 
-    const text = payload.text || payload.result || payload.transcription || payload.normalize || payload.original || '';
-    state.resultText = text || t('noText');
-    state.isResultReady = true;
-
-    setOutput(state.resultText, false);
-    setAudioLangVisible(false);
-    hideAction();
-    el.copyResultBtn.disabled = false;
-    el.downloadResultBtn.disabled = false;
-  } catch (error) {
-    state.isResultReady = false;
-    setOutput(error.message && error.message !== 'Failed to fetch' ? error.message : t('failedText'), true);
-    setAction('error', t('statusError'), true);
-    window.setTimeout(updateAction, 900);
-  } finally {
-    state.isProcessing = false;
-  }
-}
-
-function updatePlayerIcon(isPlaying) {
-  el.playerPlayIcon.innerHTML = isPlaying
-    ? '<path d="M8 5h3v14H8z"></path><path d="M13 5h3v14h-3z"></path>'
-    : '<path d="M8 5v14l11-7-11-7Z"></path>';
-}
-
-function updatePlayerTime() {
-  const current = el.audioPlayer.currentTime || 0;
-  const total = state.knownDuration || el.audioPlayer.duration || 0;
-  el.playerTime.textContent = `${formatTime(current)} / ${formatTime(total)}`;
-  el.playerProgressFill.style.width = total ? `${Math.min(100, (current / total) * 100)}%` : '0%';
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 300);
-}
-
-function animateDownload(button) {
-  button.classList.remove('is-downloading');
-  void button.offsetWidth;
-  button.classList.add('is-downloading');
-  window.setTimeout(() => button.classList.remove('is-downloading'), 620);
-}
-
-async function copyResult() {
-  if (!state.resultText) return;
-  await navigator.clipboard.writeText(state.resultText);
-  el.copyResultBtn.classList.remove('is-copied');
-  void el.copyResultBtn.offsetWidth;
-  el.copyResultBtn.classList.add('is-copied');
-  window.setTimeout(() => el.copyResultBtn.classList.remove('is-copied'), 620);
-}
-
-function downloadResult() {
-  if (!state.resultText) return;
-  animateDownload(el.downloadResultBtn);
-  downloadBlob(new Blob([state.resultText], { type: 'text/plain;charset=utf-8' }), 'stt_result.txt');
-}
-
-function downloadAudio() {
-  if (!state.selectedFile) return;
-  animateDownload(el.downloadAudioBtn);
-  downloadBlob(state.selectedFile, state.selectedFile.name || 'audio.webm');
-}
-
-function audioFileName() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const h = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  const s = String(now.getSeconds()).padStart(2, '0');
-  return `audio_${y}-${m}-${d}_${h}-${min}-${s}.webm`;
-}
-
-function updateRecordTimer() {
-  const elapsed = (Date.now() - state.recordStartedAt - state.pausedMs) / 1000;
-  const current = clamp(Math.floor(elapsed), 0, MAX_SECONDS);
-  el.recordTimer.querySelector('.timer-current').textContent = formatTime(current);
-}
-
-async function startRecording() {
-  if (state.recorder && state.recorder.state !== 'inactive') return;
-
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-    setOutput(t('micError'), true);
-    el.audioCaptureInput.click();
-    return;
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    state.chunks = [];
-    state.recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    state.recordStartedAt = Date.now();
-    state.pausedAt = 0;
-    state.pausedMs = 0;
-
-    state.recorder.ondataavailable = (event) => {
-      if (event.data.size) state.chunks.push(event.data);
-    };
-
-    state.recorder.onstop = async () => {
-      stream.getTracks().forEach((track) => track.stop());
-      stopRecordUi();
-      const duration = clamp(Math.round((Date.now() - state.recordStartedAt - state.pausedMs) / 1000), 1, MAX_SECONDS);
-      const blob = new Blob(state.chunks, { type: 'audio/webm' });
-      const file = new File([blob], audioFileName(), { type: 'audio/webm' });
-      await handleFile(file, duration);
-    };
-
-    state.recorder.start();
-    startRecordUi();
-  } catch {
-    setOutput(t('micError'), true);
-    el.audioCaptureInput.click();
-  }
-}
-
-function startRecordUi() {
-  resetResult();
-  el.recordZone.classList.add('is-recording');
-  el.recordControls.classList.add('active');
-  el.pauseRecordBtn.textContent = t('pauseRecordBtn');
-  setAction('recording', t('statusRecording'), true);
-  setOutput(t('statusRecording'), true);
-  state.recordTimer = window.setInterval(updateRecordTimer, 250);
-  state.recordStopper = window.setTimeout(stopRecording, MAX_SECONDS * 1000);
-  updateRecordTimer();
-}
-
-function stopRecordUi() {
-  window.clearInterval(state.recordTimer);
-  window.clearTimeout(state.recordStopper);
-  state.recordTimer = null;
-  state.recordStopper = null;
-  el.recordZone.classList.remove('is-recording');
-  el.recordControls.classList.remove('active');
-  el.recordTimer.querySelector('.timer-current').textContent = '00:00';
-}
-
-function pauseRecording(event) {
-  event.stopPropagation();
-  if (!state.recorder) return;
-
-  if (state.recorder.state === 'recording') {
-    state.recorder.pause();
-    state.pausedAt = Date.now();
-    el.pauseRecordBtn.textContent = t('resumeRecordBtn');
-    setAction('recording', t('statusPaused'), true);
-    return;
-  }
-
-  if (state.recorder.state === 'paused') {
-    state.recorder.resume();
-    state.pausedMs += Date.now() - state.pausedAt;
-    state.pausedAt = 0;
-    el.pauseRecordBtn.textContent = t('pauseRecordBtn');
-    setAction('recording', t('statusRecording'), true);
-  }
-}
-
-function stopRecording(event) {
-  event?.stopPropagation();
-  if (!state.recorder || state.recorder.state === 'inactive') return;
-  state.recorder.stop();
-}
-
-function initEvents() {
-  el.themeToggle.addEventListener('click', () => applyTheme(state.theme === 'dark' ? 'light' : 'dark'));
-  el.langToggle.addEventListener('click', () => el.langMenu.classList.toggle('open'));
-  el.langButtons.forEach((btn) => btn.addEventListener('click', () => {
-    applyLanguage(btn.dataset.lang);
-    el.langMenu.classList.remove('open');
-  }));
-
-  el.a11yToggle.addEventListener('click', () => {
-    const isOpen = el.a11yWrap.classList.toggle('open');
-    el.a11yToggle.setAttribute('aria-expanded', String(isOpen));
-  });
-  el.fontDecreaseBtn.addEventListener('click', () => { state.fontPx = clamp(state.fontPx - 1, 14, 20); applyA11y(); });
-  el.fontIncreaseBtn.addEventListener('click', () => { state.fontPx = clamp(state.fontPx + 1, 14, 20); applyA11y(); });
-  el.contrastToggleBtn.addEventListener('click', () => { state.highContrast = !state.highContrast; applyA11y(); });
-
-  el.uploadModeBtn.addEventListener('click', () => switchMode('upload'));
-  el.recordModeBtn.addEventListener('click', () => switchMode('record'));
-
-  el.fileInput.addEventListener('change', () => handleFile(el.fileInput.files[0]));
-  el.audioCaptureInput.addEventListener('change', () => handleFile(el.audioCaptureInput.files[0]));
-
-  el.dropzone.addEventListener('dragover', (event) => { event.preventDefault(); el.dropzone.classList.add('dragover'); });
-  el.dropzone.addEventListener('dragleave', () => el.dropzone.classList.remove('dragover'));
-  el.dropzone.addEventListener('drop', (event) => {
-    event.preventDefault();
-    el.dropzone.classList.remove('dragover');
-    handleFile(event.dataTransfer.files[0]);
-  });
-
-  el.audioLangButtons.forEach((btn) => btn.addEventListener('click', () => {
-    state.selectedAudioLang = btn.dataset.audioLang;
-    el.audioLangButtons.forEach((item) => item.classList.toggle('active', item === btn));
-    updateAction();
-  }));
-
-  el.removeBtn.addEventListener('click', clearSelectedFile);
-  el.transcribeBtn.addEventListener('click', transcribe);
-  el.copyResultBtn.addEventListener('click', copyResult);
-  el.downloadResultBtn.addEventListener('click', downloadResult);
-  el.downloadAudioBtn.addEventListener('click', downloadAudio);
-
-  el.playerPlayBtn.addEventListener('click', () => {
-    if (!el.audioPlayer.src) return;
-    el.audioPlayer.paused ? el.audioPlayer.play() : el.audioPlayer.pause();
-  });
-  el.audioPlayer.addEventListener('play', () => updatePlayerIcon(true));
-  el.audioPlayer.addEventListener('pause', () => updatePlayerIcon(false));
-  el.audioPlayer.addEventListener('ended', () => updatePlayerIcon(false));
-  el.audioPlayer.addEventListener('timeupdate', updatePlayerTime);
-  el.audioPlayer.addEventListener('loadedmetadata', updatePlayerTime);
-  el.playerProgress.addEventListener('click', (event) => {
-    const duration = state.knownDuration || el.audioPlayer.duration;
-    if (!duration) return;
-    const rect = el.playerProgress.getBoundingClientRect();
-    el.audioPlayer.currentTime = ((event.clientX - rect.left) / rect.width) * duration;
-  });
-
-  el.recordZone.addEventListener('click', startRecording);
-  el.recordZone.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
+    dropzone.addEventListener("dragover", (event) => {
       event.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("dragover");
+      handleFile(event.dataTransfer.files[0]);
+    });
+
+    removeBtn.addEventListener("click", () => {
+      resetSelectedFile();
+      setIdleStatusForCurrentMode();
+      setOutputKey("outputPlaceholder", true);
+    });
+
+    uploadModeBtn.addEventListener("click", () => {
+      showPanel("upload");
+      if (!selectedFile && (!mediaRecorder || mediaRecorder.state === "inactive")) {
+        setStatusKey("statusWaiting");
+      }
+    });
+
+    recordModeBtn.addEventListener("click", () => {
+      showPanel("record");
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        setStatusKey("statusWaitingRecording");
+      }
+    });
+
+    recordZone.addEventListener("click", (event) => {
+      if (event.target.closest("button")) return;
+      if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) return;
       startRecording();
+    });
+
+    recordZone.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) return;
+      startRecording();
+    });
+
+    recordBtn.addEventListener("click", startRecording);
+    pauseRecordBtn.addEventListener("click", toggleRecordingPause);
+    stopRecordBtn.addEventListener("click", stopRecording);
+
+    playerPlayBtn.addEventListener("click", () => {
+      if (!audioPlayer.src) return;
+
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+      } else {
+        audioPlayer.pause();
+      }
+    });
+
+    playerProgress.addEventListener("click", (event) => {
+      const duration = getDisplayDuration();
+      if (!Number.isFinite(duration) || duration <= 0) return;
+
+      const rect = playerProgress.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      audioPlayer.currentTime = ratio * duration;
+      updatePlayerUI();
+    });
+
+    audioPlayer.addEventListener("play", () => setPlayIcon(true));
+    audioPlayer.addEventListener("pause", () => setPlayIcon(false));
+    audioPlayer.addEventListener("ended", () => {
+      setPlayIcon(false);
+      audioPlayer.currentTime = 0;
+      updatePlayerUI();
+    });
+    audioPlayer.addEventListener("timeupdate", updatePlayerUI);
+    audioPlayer.addEventListener("loadedmetadata", updatePlayerUI);
+
+    const FEEDBACK_DURATION_MS = 760;
+
+    function runButtonFeedback(button, className) {
+      if (!button) return;
+      button.classList.remove(className, "instant-reset");
+      void button.offsetWidth;
+      button.classList.add(className);
+      window.setTimeout(() => {
+        if (className === "is-copied") {
+          button.classList.add("instant-reset");
+          button.classList.remove(className);
+          requestAnimationFrame(() => {
+            button.classList.remove("instant-reset");
+          });
+          return;
+        }
+
+        button.classList.remove(className);
+      }, FEEDBACK_DURATION_MS);
     }
-  });
-  el.pauseRecordBtn.addEventListener('click', pauseRecording);
-  el.stopRecordBtn.addEventListener('click', stopRecording);
-}
 
-function init() {
-  applyTheme(state.theme);
-  applyA11y();
-  applyLanguage(state.lang);
-  setAudioLangVisible(false);
-  clearSelectedFile();
-  initEvents();
-}
+    function setCopySuccessFeedback() {
+      copyResultText.textContent = t("copiedResult");
+      runButtonFeedback(copyResultBtn, "is-copied");
+      window.setTimeout(() => {
+        copyResultText.textContent = t("copyResult");
+      }, FEEDBACK_DURATION_MS);
+    }
 
-init();
+    copyResultBtn.addEventListener("click", async () => {
+      const text = outputText.textContent.trim();
+      if (!text || outputText.classList.contains("placeholder")) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopySuccessFeedback();
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+        setCopySuccessFeedback();
+      }
+    });
+
+
+
+    function downloadSelectedAudio() {
+      if (!selectedFile) return;
+      runButtonFeedback(downloadAudioBtn, "is-downloading");
+
+      const url = URL.createObjectURL(selectedFile);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = selectedDisplayFileName && !selectedDisplayFileName.includes(".")
+        ? `${selectedDisplayFileName}.${(selectedFile.name || "audio.webm").split(".").pop()}`
+        : selectedDisplayFileName || selectedFile.name || `${getTimestampFileName()}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    downloadAudioBtn.addEventListener("click", downloadSelectedAudio);
+
+    function downloadTextResult() {
+      const text = outputText.textContent.trim();
+      if (!text || outputText.classList.contains("placeholder")) return;
+      runButtonFeedback(downloadResultBtn, "is-downloading");
+
+      const now = new Date();
+      const stamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0")
+      ].join("-") + "_" + [
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0")
+      ].join("-");
+
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `stt_result_${stamp}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    downloadResultBtn.addEventListener("click", downloadTextResult);
+
+
+    function extractNormalizedText(responseData) {
+      if (!responseData || typeof responseData !== "object") return "";
+
+      // Backend may return either:
+      // 1) { data: { normalize: "...", original: "..." } }
+      // 2) { normalize: "...", original: "..." }
+      // 3) { text: "..." } / { result: "..." } for older endpoints
+      const data = responseData.data && typeof responseData.data === "object"
+        ? responseData.data
+        : responseData;
+
+      const candidates = [
+        data.normalize,
+        data.normalized,
+        data.normalized_text,
+        data.original,
+        data.original_text,
+        data.text,
+        data.result,
+        responseData.text,
+        responseData.result,
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+          return candidate.trim();
+        }
+      }
+
+      return "";
+    }
+
+transcribeBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+
+      if (!selectedAudioLang) {
+        transcribeBtn.disabled = true;
+        setStatusKey("selectAudioLangStatus");
+        setOutputKey("selectAudioLangOutput", true);
+        return;
+      }
+
+      transcribeBtn.disabled = true;
+      setStatusKey("statusProcessing");
+      setOutputKey("processingText", true);
+
+      const formData = new FormData();
+      const safeDisplayFilename = selectedDisplayFileName || selectedFile.name || "audio.webm";
+
+      formData.append("audio", selectedFile, selectedFile.name || "audio.webm");
+
+      // Send both names so the frontend works with either backend version:
+      // old backend: lang / display_filename
+      // clean-architecture backend: audio_lang / display_name
+      formData.append("lang", selectedAudioLang);
+      formData.append("audio_lang", selectedAudioLang);
+      formData.append("display_filename", safeDisplayFilename);
+      formData.append("display_name", safeDisplayFilename);
+
+      try {
+        const response = await fetch("/api/stt", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          let message = "STT request failed";
+          try {
+            const errorData = await response.json();
+            message = errorData.detail || errorData.message || message;
+          } catch (_) {}
+          throw new Error(message);
+        }
+
+        const data = await response.json();
+        const resultText = extractNormalizedText(data);
+
+        lastSttResponse = {
+          ...data,
+          text: resultText,
+          sourceFilename: selectedFile.name || null,
+          displayFilename: selectedDisplayFileName || selectedFile.name || null,
+          sourceSize: selectedFile.size || null,
+          language: selectedAudioLang,
+          interfaceLanguage: currentLang,
+          createdAt: new Date().toISOString()
+        };
+
+        audioLangSelector.classList.remove("active");
+        actionsWrap.classList.add("is-hidden");
+        setStatusKey("statusDone", "success");
+        if (resultText) {
+          setOutput(resultText, false);
+        } else {
+          setOutputKey("noText", true);
+        }
+      } catch (error) {
+        setStatusKey("statusError", "error");
+        setOutput(getReadableRequestError(error), false);
+      } finally {
+        transcribeBtn.disabled = false;
+      }
+    });
+
+    themeToggle.addEventListener("click", () => {
+      const currentTheme = document.documentElement.dataset.theme || "light";
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      applyTheme(nextTheme);
+    });
+
+    langToggle.addEventListener("click", () => {
+      langMenu.classList.toggle("open");
+    });
+
+    langButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        applyLanguage(button.dataset.lang);
+        langMenu.classList.remove("open");
+      });
+    });
+
+    audioLangButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        applyAudioLanguage(button.dataset.audioLang);
+      });
+    });
+
+    a11yToggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isOpen = a11yPanel.classList.toggle("open");
+      a11yToggle.setAttribute("aria-expanded", String(isOpen));
+      langMenu.classList.remove("open");
+    });
+
+
+    fontDecreaseBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      applyA11yFont(currentFontPx - 1);
+    });
+
+    fontIncreaseBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      applyA11yFont(currentFontPx + 1);
+    });
+
+    contrastToggleBtn.addEventListener("click", () => {
+      applyHighContrast(!highContrastEnabled);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!langMenu.contains(event.target)) {
+        langMenu.classList.remove("open");
+      }
+      if (!a11yWrap.contains(event.target)) {
+        a11yPanel.classList.remove("open");
+        a11yToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    const savedTheme = localStorage.getItem("theme") || "light";
+    applyA11yFont(currentFontPx);
+    applyHighContrast(highContrastEnabled);
+    applyTheme(savedTheme);
+    applyAudioLanguage(null);
+    applyLanguage(currentLang);
